@@ -132,6 +132,5 @@ point.
 
 ## **License**
 
-[MIT](LICENSE) — or swap for [Apache 2.0](LICENSE) if you'd rather match
-the license most of the reference projects above use. Pick one before your
-first commit and add the matching `LICENSE` file; the badge above assumes MIT.
+[MIT](LICENSE). Pick one before your first commit and add the matching `LICENSE`
+file; the badge above assumes MIT.
