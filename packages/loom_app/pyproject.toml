@@ -1,0 +1,16 @@
+[project]
+name = "loom_app"
+version = "0.0.1"
+requires-python = ">=3.12"
+dependencies = ["loom_core", "loom_provider"]
+
+[project.scripts]
+loom = "loom_app.cli:main"
+
+[tool.uv.sources]
+loom_core = { workspace = true }
+loom_provider = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

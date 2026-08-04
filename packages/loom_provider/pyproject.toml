@@ -1,0 +1,8 @@
+[project]
+name = "loom_provider"
+version = "0.0.1"
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
