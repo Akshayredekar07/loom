@@ -1,10 +1,21 @@
 [project]
 name = "loom-workspace"
-version = "0.0.0"
+version = "0.0.1"
 requires-python = ">=3.12"
+
+dependencies = [
+    "loom-app",
+    "loom-core",
+    "loom-provider",
+]
 
 [tool.uv.workspace]
 members = ["packages/*"]
+
+[tool.uv.sources]
+loom-provider = { workspace = true }
+loom-core = { workspace = true }
+loom-app = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -12,6 +23,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "import-linter>=2.0",
+    "pre-commit>=4.6.1",
 ]
 
 [tool.ruff]
@@ -30,3 +42,44 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["loom_provider", "loom_core", "loom_app"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = [
+    "packages/loom_provider/src",
+    "packages/loom_core/src",
+    "packages/loom_app/src",
+]
+namespace_packages = true
+explicit_package_bases = true
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "packages/loom_provider/src",
+    "packages/loom_core/src",
+    "packages/loom_app/src",
+]
+
+
+[tool.importlinter]
+root_packages = ["loom_provider", "loom_core", "loom_app"]
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture"
+type = "layers"
+layers = [
+    "loom_app",
+    "loom_core",
+    "loom_provider",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[tool.hatch.build]
+only-include = ["packages"]
