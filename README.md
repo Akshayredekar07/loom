@@ -1,20 +1,4 @@
-![loom-agent-logo](resources/loom-agent-dark.svg)
-
-<p align="center">
-  <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python 3.12+"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-informational" alt="License"></a>
-  <a href="dev-notes/00-project-plan.md"><img src="https://img.shields.io/badge/status-learning%20project%20%7C%20WIP-yellow" alt="Status"></a>
-</p>
-
-<p align="center">
-  <a href="#what-is-loom">What is Loom?</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#repository-layout">Repository Layout</a> ·
-  <a href="dev-notes/">Dev Notes</a> ·
-  <a href="#references">References</a>
-</p>
-
+![loom-agent-logo](resources/loom-banner.svg)
 
 ## **What is Loom?**
 
@@ -23,9 +7,8 @@ LangChain, no CrewAI, no AutoGen, no agent framework of any kind. It exists to
 answer one question by actually building the answer: **what is a coding agent
 made of, underneath the framework?**
 
-Every real agent worth learning from — [Claude Code](#references),
-[OpenAI Codex](#references), [Grok Build](#references), and Hugging Face's
-[Tau](#references) — is the same three ideas wearing different clothes:
+Every real agent worth learning from is the same three ideas wearing
+different clothes:
 
 1. **Messages are the state.** The transcript is an ordered, append-only list. Nothing lives outside it that matters for replay.
 2. **The loop is provider-agnostic and UI-agnostic.** It only knows about messages, tools, and events — never a renderer, never a vendor SDK.
@@ -35,6 +18,9 @@ Loom builds those three ideas first, by hand, then layers on everything else
 — tools, sessions, skills, a TUI — one deliberate phase at a time. This is
 **not** a race to feature parity with a 500K-line production agent. It's a
 minimal, readable version built to teach you why each piece exists.
+
+See [`REFERENCES.md`](REFERENCES.md) for which real agents this project
+studies, and which specific design decisions came from where.
 
 
 ## **Quick Start**
@@ -54,7 +40,7 @@ uv run loom --version
 ```
 
 Loom isn't installable from PyPI yet — it's built phase by phase, in order,
-by you. Start with [`dev-notes/00-project-plan.md`](dev-notes/00-project-plan.md).
+by you.
 
 
 
@@ -106,22 +92,6 @@ This is not a "clone and run" project — it's a "clone and *build*" project.
 3. Run that phase's checklist. All boxes green before moving on.
 4. Write a short entry in `dev-notes/` — what you built, what you decided
    against, and why. That's what makes the repo legible to future-you.
-
-
-## **References**
-
-Loom's design is adapted from public architecture, not copied from private
-source. Primary references, worth reading directly:
-
-- **Tau** (Hugging Face) — the closest template for this project's phase
-  structure and package split. [`huggingface/tau`](https://github.com/huggingface/tau) · [docs](https://twotimespi.dev/)
-- **Claude Code** (Anthropic) — the production end of the spectrum; async-generator
-  loop, uniform tool interface. [Agent SDK docs](https://code.claude.com/docs/en/agent-sdk/agent-loop)
-- **OpenAI Codex** — Submission Queue / Event Queue pattern, one core crate
-  behind multiple frontends over a JSON-RPC protocol boundary. [`openai/codex`](https://github.com/openai/codex)
-- **Grok Build** (xAI) — independent convergent design: agent loop / tools /
-  TUI / extensions as four crates, MCP + ACP for external integration. [`xai-org/grok-build`](https://github.com/xai-org/grok-build)
-
 
 
 ## **Contributing**
