@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     """Message producer role."""
 
     SYSTEM = "system"
