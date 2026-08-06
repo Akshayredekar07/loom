@@ -64,12 +64,6 @@ loom_app  →  loom_core  →  loom_provider
 └─────────────┘     └──────────────┘     └────────────────┘
 ```
 
-`loom_core` never imports `loom_app` — that's a packaging fact enforced by
-[import-linter](https://import-linter.readthedocs.io), not a convention
-anyone has to remember. Full rationale in
-[`dev-notes/01-phase-0-foundation.md`](dev-notes/01-phase-0-foundation.md).
-
-
 ## **Repository Layout**
 
 | Path | Contents |
