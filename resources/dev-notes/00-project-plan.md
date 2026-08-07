@@ -304,11 +304,18 @@ Full install commands and config files are in `01-PHASE-0-foundation.md`.
   - <https://claude-code-from-source.com/>
   - <https://dev.to/brooks_wilson_36fbefbbae4/claude-code-architecture-explained-agent-loop-tool-system-and-permission-model-rust-rewrite-41b2>
 - Anthropic's public Agent SDK loop docs — <https://code.claude.com/docs/en/agent-sdk/agent-loop>
+- `openai/codex` — <https://github.com/openai/codex>
+- `xai-org/grok-build` — <https://github.com/xai-org/grok-build>
+- `nousresearch/hermes-agent` — <https://github.com/nousresearch/hermes-agent>
+- `codeaashu/claude-code` — <https://github.com/codeaashu/claude-code>
+- `opencode` — <https://github.com/sst/opencode>
 - `huggingface/smolagents` (for a contrasting, code-executing agent style) — <https://github.com/huggingface/smolagents>
 
 Not independently re-analyzed for this plan (secondary references, revisit
 after your own loop works): `openai/codex`, `xai-org/grok-build`,
-`codeaashu/claude-code`, opencode.
+`nousresearch/hermes-agent`, `codeaashu/claude-code`, `opencode`.
+
+---
 
 ---
 
