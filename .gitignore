@@ -6,3 +6,6 @@ __pycache__/
 .ruff_cache/
 uv.lock.tmp
 scaffold-loom.sh
+.env
+.env.*
+!.env.example
