@@ -65,11 +65,14 @@ class OpenAICompatibleProvider:
         payload = self._build_payload(messages, system=system, tools=tools)
         open_tool_calls: dict[int, str] = {}
         client = self._get_client()
+        headers: dict[str, str] = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         try:
             with client.stream(
                 "POST",
                 f"{self.base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                headers=headers,
                 json=payload,
             ) as response:
                 if response.status_code != 200:
