@@ -1,13 +1,11 @@
 # Phase 2 — Provider Interface: a Fake Provider and a Real One
 
-> **Revision note.** This version of Phase 2 incorporates a cross-check research pass against five additional agent systems (xai-org/grok-build, openai/codex, NousResearch/hermes-agent, tinyhumansai/openhuman, yc-software/qm), chosen to be architecturally different from each other and from the original three (Tau, pi-agent-core, OpenAI Agents SDK). Two of the five turned out not to be on-topic for this specific phase; that finding is recorded in §2 and §11 rather than being skipped silently. The original three remain the foundation; all hardening from the research pass is folded into the relevant sections below — no separate addendum file.
-
-Phase 1 gave you a fully offline vocabulary: Message, ToolDefinition, AgentEvent. Nothing in it could talk to a model. This phase builds the layer below that vocabulary — the thing that actually knows how to open an HTTP connection to a vendor and turn whatever comes back into something uniform. Get the boundary right here and Phase 3's loop never has to know or care whether it's driving OpenAI, Anthropic, a local vLLM box, or a script you wrote by hand for a test.
+Phase 1 defines offline types (`Message`, `ToolDefinition`, `AgentEvent`). This phase adds the layer that talks to models: a `Provider` protocol, a `StreamEvent` vocabulary, `FakeProvider` for tests, and `OpenAICompatibleProvider` for real HTTP.
 
 ## Table of Contents
 
 1. [Goal of this phase](#1-goal-of-this-phase)
-2. [Research recap — how eight different projects draw this exact line](#2-research-recap--how-eight-different-projects-draw-this-exact-line)
+2. [Design rationale](#2-design-rationale)
 3. [The puzzle this phase has to solve](#3-the-puzzle-this-phase-has-to-solve)
 4. [loom_provider/events.py](#4-loom_providereventspy)
 5. [loom_provider/provider.py](#5-loom_providerproviderpy)
@@ -15,11 +13,10 @@ Phase 1 gave you a fully offline vocabulary: Message, ToolDefinition, AgentEvent
 7. [loom_provider/openai_compatible.py](#7-loom_provideropenai_compatiblepy)
 8. [A runnable demo: fake provider, scripted tool call, still no model](#8-a-runnable-demo-fake-provider-scripted-tool-call-still-no-model)
 9. [Tests](#9-tests)
-10. [Comparison table — how the real agents shape this](#10-comparison-table--how-the-real-agents-shape-this)
-11. [Reference sets, and what we changed because of them](#11-reference-sets-and-what-we-changed-because-of-them)
-12. [Phase 2 checklist](#12-phase-2-checklist)
-13. [Common pitfalls at this layer](#13-common-pitfalls-at-this-layer)
-14. [Known debt carried into later phases](#14-known-debt-carried-into-later-phases)
+10. [Key design decisions](#10-key-design-decisions)
+11. [Phase 2 checklist](#11-phase-2-checklist)
+12. [Common pitfalls at this layer](#12-common-pitfalls-at-this-layer)
+13. [Known debt carried into later phases](#13-known-debt-carried-into-later-phases)
 
 ## 1. Goal of this phase
 
@@ -30,32 +27,18 @@ By the end of this phase, `loom_provider` exports a `Provider` protocol, a small
 
 Nothing in this package imports `loom_core`. That's not an accident — it's the one design decision this whole phase hangs off, and §3 below is about why.
 
-## 2. Research recap — how eight different projects draw this exact line
+## 2. Design rationale
 
-The original three, on which this phase was built:
+Cross-checked against Tau, pi-agent-core, OpenAI Agents SDK, Codex, Hermes, and Grok Build. Shared pattern:
 
-**Tau (`tau_ai`).** The architecture doc is explicit that dependencies point one way only — `tau_coding` → `tau_agent` → `tau_ai` — and that `tau_ai` "translates each provider's API (OpenAI, Anthropic, …) into Tau's provider-neutral event stream, so nothing above it has to care which model vendor is in use." Tau's own file layout backs this up: `tau_ai` ships its own `content.py` — a message/content representation that belongs to the provider layer, separate from the richer `Message` type the harness works with above it.
+- **Vendor translation stays in the adapter.** Retry, cancellation, and catalog selection live above the provider layer.
+- **`ProviderMessage` is not `loom_core.Message`.** The provider gets a flat wire shape; Phase 3 translates between layers.
+- **Two event levels.** `StreamEvent` (provider) vs `AgentEvent` (loop) — smaller stream normalized before assembly.
+- **Config-dumb providers.** `base_url`, `api_key`, `model` as constructor args only; env/catalog reads belong in `loom_app`.
+- **Reuse one HTTP client per provider instance** (Codex and multi-turn sessions expect this).
+- **JSON-primitive fields on every event** — enables Phase 7 serialization and JSON-RPC frontends without redesign.
 
-**pi-agent-core** (the TypeScript project both Tau and this plan take their architectural cue from). Its own package description calls out a two-level event system: one level for agent lifecycle events, a separate, smaller level for "LLM streaming primitives" that a caller-supplied `StreamFn` protocol produces. That's the same split as `StreamEvent` (small, provider-level) vs. `AgentEvent` (rich, loop-level) — arrived at independently, in a different language, for the same reason: the loop shouldn't have to parse vendor JSON, and the provider adapter shouldn't have to know what a "turn" or a "harness" is.
-
-**OpenAI's own Agents SDK** (`openai-agents-python`). Every model implementation satisfies a `Model` protocol whose `stream_response()` method "connects to the underlying provider and yields raw stream events"; a separate orchestration layer then "consumes model events, applies turn logic, and transforms them into higher-level stream events." Same shape again, from the vendor whose wire format this phase's real provider speaks.
-
-The five added in the cross-check research pass:
-
-**`xai-org/grok-build` — on-topic.** A ~1M-line Rust workspace (SpaceXAI's production grok CLI), closed to outside PRs, but its public docs and MarkTechPost/Wikipedia coverage describe the shape clearly enough: a harness + TUI, config-driven custom models (`[model.my-model]` with `base_url` + `env_key` in `~/.grok/config.toml`), headless mode with `--output-format streaming-json`, and native MCP support rather than a bespoke tool protocol. Useful precisely because it's not Python. It confirmed two things already in the design: connection lifecycle ought to be reused across turns, and the event stream ought to be JSON-primitive-shaped (it ships a `streaming-json` output mode for exactly that reason).
-
-**`openai/codex` — on-topic and the most directly useful.** Real, current, documented in depth by DeepWiki and OpenAI's own engineering blog. `codex-core`'s `ModelClient` explicitly caches its connection between turns — "dropping the session saves the WS connection back to the cache for reuse in the next turn" — because a multi-turn coding session makes many requests to the same endpoint, and re-handshaking TCP+TLS on every single one is pure waste. That observation is the reason §7 holds one `httpx.Client` per `OpenAICompatibleProvider` instance rather than opening a fresh one per call. Codex's move to an App Server speaking JSON-RPC over stdio — so even its own TUI is "just another client" — is also why the JSON-serializability rule in §4 below is being written down now and not in Phase 7.
-
-**`NousResearch/hermes-agent` — on-topic.** Its `agent/transports/` package — a `ProviderTransport` ABC with `AnthropicTransport`, `ChatCompletionsTransport`, `ResponsesApiTransport`, `BedrockTransport` concrete implementations — is close enough to this phase's `Provider` protocol that it's worth reading as a "what does this look like with four real vendors instead of one" preview. Hermes' split is exactly the cut this phase already drew: each `*Transport` owns "message conversion, tool conversion, kwargs assembly, and response normalization," while "streaming, retries, prompt cache, and credential refresh remain on `AIAgent`" one layer up. Four independent projects (Tau, pi-agent-core, OpenAI's SDK, now Hermes) landing on the same wire-translation-owns-this / cross-cutting-owns-that split is about as strong a confirmation as this kind of research gets. Hermes' contributor docs also call per-conversation prompt caching "sacred" — that observation gets carried into §14 because it constrains compaction design later.
-
-**`tinyhumansai/openhuman` — mostly off-topic for this phase.** OpenHuman is a personal-assistant/memory harness (Tauri desktop app, OAuth into Gmail/Slack/Notion, a "Memory Tree," a meeting-bot with a face), not a coding-agent provider layer. Its actual architecture (dual-socket Tauri/Rust core, OAuth-heavy memory ingestion) doesn't map onto anything in `loom_provider`. It does confirm one relevant pattern in passing — multi-provider routing with a "bring your own key or run local Ollama" default — but that's already covered by the design and §10. Noted and set aside rather than forced into the comparison table.
-
-**`yc-software/qm` — also mostly off-topic for this phase, but for a more useful reason.** QM operates *above* the provider layer entirely. It explicitly plugs in whole existing harnesses — "Pi, OpenCode, Codex, and Claude Code all drive the same core" — rather than implementing its own model-provider adapters. What QM does contribute is a security-posture idea (Strict / Auto / Dangerous, with tool-call approval and provenance-labelled content screening sitting between "tool call decided" and "tool executed") that's relevant to **Phase 5**, not Phase 2. Flagged in §14 so it isn't lost between now and then.
-
-Two confirmations to call out explicitly — they validate choices that were already in the design rather than requiring new ones:
-
-- **Vendor translation stays out of the reusable core.** Hermes' split (above) is exactly the split this phase already drew: `_build_payload`/`_handle_line` own wire translation inside `OpenAICompatibleProvider`; retry and cancellation were deliberately left out (§14) for the harness to own later. Four independent projects landing on the same cut is a strong signal.
-- **A config-driven, provider-agnostic model catalog is the norm, not the exception.** Grok Build's `~/.grok/config.toml` with a `base_url`/`env_key` per custom model, and Codex's provider metadata living in its own `SharedModelProvider` (base URL, wire API, retry limits, headers) rather than scattered across the client, both point at treating "which endpoint, which key, which wire shape" as data, not code. This phase already keeps `OpenAICompatibleProvider` config-dumb (plain constructor args, no env reads); Phase 18's provider catalog can consume that shape directly without a refactor.
+Deferred to later phases: retry/backoff, cancellation, Anthropic adapter (Phase 2.5), provider catalog UX (Phase 18).
 
 ## 3. The puzzle this phase has to solve
 
@@ -761,41 +744,18 @@ Run it:
 uv run pytest tests/loom_provider -v
 ```
 
-## 10. Comparison table — how the real agents shape this
+## 10. Key design decisions
 
-| Concept | loom_provider | Tau (tau_ai) | Codex (codex-core) | Hermes (agent/transports) | Grok Build |
-|---|---|---|---|---|---|
-| Wire-translation ownership | inside each Provider impl (`_build_payload`/`_handle_line`) | inside `tau_ai` adapters | inside `ModelClient` + per-provider config | inside each `*Transport` (owns conversion + normalization) | inside Rust provider integrations (not public) |
-| Cross-cutting concerns (retry, cache, cancel) | deliberately deferred to Phase 3/4 harness-level | `ModelClient` (retry limits are part of provider metadata) | retry limits part of provider metadata | stays on `AIAgent`, one layer above transports | not publicly documented |
-| Connection lifecycle | reused across turns per provider instance (§7) | reused (async client) | explicit WS cache, reused across turns | not publicly documented | not publicly documented |
-| Config source | plain constructor args (deliberately config-dumb) | `~/.tau/catalog.toml` | layered TOML (`codex-config`) | env / config file, provider chosen at runtime | `~/.grok/config.toml`, `[model.*]` blocks |
-| Event transport shape | in-process iterator now; JSON-primitive fields on purpose (§3, §4) | in-process async iterator | migrating to JSON-RPC over stdio for every client, including its own TUI | JSON-RPC to a `tui_gateway` process | `--output-format streaming-json` headless mode |
+| Decision | Choice |
+|---|---|
+| Wire translation | `_build_payload` / `_handle_line` inside each provider |
+| Cross-cutting (retry, cancel) | Deferred to harness (Phase 3/4) |
+| HTTP client | One `httpx.Client` per provider instance, with `close()` |
+| Config | Plain constructor args; catalog in `loom_app` |
+| Event fields | JSON-primitive only (str, int, bool, enums, nested frozen dataclasses) |
+| Real providers shipped | `FakeProvider`, `OpenAICompatibleProvider` |
 
-Out of scope here:
-
-- **OpenHuman** — personal-assistant/memory harness, not a coding-agent provider layer. *(not comparable — different problem)*
-- **QM** — orchestrates whole external harnesses (Pi / OpenCode / Codex / Claude Code); no provider adapters of its own. *(not comparable — different layer; QM's security-posture idea is relevant to Phase 5, see §14.)*
-
-## 11. Reference sets, and what we changed because of them
-
-The original three (Tau, pi-agent-core, OpenAI Agents SDK) are the foundation; the rest of this section is what the five-source cross-check pass added.
-
-**What the original reference set already got right** (cross-checked again, four projects in agreement now):
-
-- **Retry and cancellation are named, first-class concerns in pi-agent-core** (`StreamFn` protocol, "cooperative cancellation via `asyncio.Event`"), not bolted on later. This phase deliberately does *not* implement retry logic or cancellation — `StreamError.retryable` is reported, not acted on, and there's no cancellation token anywhere in `Provider.stream()`. That's a conscious scope cut, written down in §14, not an oversight: retry policy is a loop/harness-level decision (Phase 3/4), and cancellation needs the async upgrade Phase 1 already flagged as coming in Phase 3. Building either one against a sync, sequential `Provider.stream()` would mean reworking it the moment Phase 3 lands — better to carry the debt explicitly than guess at an API shape now and break it in two phases.
-- **A two-level event system, confirmed independently.** pi-agent-core drawing the exact same `StreamEvent`/`AgentEvent`-style split as Tau, in a completely separate codebase and language, is why §3's dependency puzzle gets a whole section instead of a footnote — three unrelated projects converging on it independently is a much stronger signal than one project doing it once.
-
-**One thing considered and deliberately not adopted from the OpenAI Agents SDK reference:** baking model/provider selection logic (which vendor, which credentials, which base URL) into this package. The SDK's `Model` protocol lives inside an app that already knows its own provider config; `loom_provider` stays configuration-dumb on purpose — `OpenAICompatibleProvider` takes `base_url`/`api_key`/`model` as plain constructor arguments and nothing else. Reading environment variables, a catalog file, or a `/login` flow is `loom_app` territory, much later in the phase plan. Grok Build's `~/.grok/config.toml` and Codex's `SharedModelProvider` reinforce that the catalog itself belongs at the app layer — and confirm that the constructor-args shape here will compose cleanly with whatever catalog emerges.
-
-**What the five-source cross-check pass changed in this phase's design:**
-
-1. **`OpenAICompatibleProvider` now holds one `httpx.Client` per instance instead of opening a fresh one per call.** Codex's `ModelClient` explicitly caches its connection between turns ("dropping the session saves the WS connection back to the cache for reuse in the next turn") because a multi-turn coding session makes many requests to the same endpoint, and re-handshaking TCP+TLS on every single one is pure waste. The provider exposes a `close()` and is a context manager so callers get clean shutdown even on exception. `FakeProvider` got the same `close()` / `__enter__` / `__exit__` shape — a no-op there, but kept on the class so the loop can treat every `Provider` uniformly without an `isinstance` check. The `Provider` protocol itself now declares `close()` so this is enforced, not just a convention. See §7, §6, §5.
-
-2. **The JSON-serializability rule is now a standing design constraint, not a Phase 7 retrofit.** Codex's move to an App Server (JSON-RPC over stdio, so its own TUI is "just another client"), Grok Build's `--output-format streaming-json` headless mode, and Hermes' TUI talking to a `tui_gateway` process over JSON-RPC all land on the same thing: the event stream is a JSON-serializable wire protocol, not just an in-process Python generator. Phase 1 §14 already deferred *implementing* serialization to Phase 7; that's still the right call — don't write `to_dict`/`from_dict` now. But holding "every field on every event variant is JSON-primitive-shaped" as a habit from this phase forward is what makes Phase 7's actual serialization a 15-minute dispatch table instead of a redesign. Codified in §3 prose, in the `events.py` module docstring, and in the new entry in `dev-notes/0003-provider-boundary.md` that the checklist asks for.
-
-The remaining things the cross-check pass surfaced are real but belong to phases that haven't happened yet — written down in §14 so they don't need re-discovering later.
-
-## 12. Phase 2 checklist
+## 11. Phase 2 checklist
 
 - [ ] `loom_provider/events.py` exists: `TextDelta`, `ThinkingDelta`, `ToolCallStart`, `ToolCallDelta`, `ToolCallEnd`, `Usage`, `StreamEnd`, `StreamError`, and the `StreamEvent` union
 - [ ] `loom_provider/provider.py` exists: `ProviderMessage`, `ProviderToolCall`, `ProviderToolSchema`, `Provider` protocol (including `close()`)
@@ -816,7 +776,7 @@ The remaining things the cross-check pass surfaced are real but belong to phases
 - [ ] You can explain, out loud, why every `StreamEvent` field is JSON-primitive-shaped, and what would break if a callback or live exception snuck in
 - [ ] `dev-notes/0003-provider-boundary.md` written (ADR template from Phase 0) — record anything you changed from this file and why
 
-## 13. Common pitfalls at this layer
+## 12. Common pitfalls at this layer
 
 - **Importing `loom_core` "just for the types, it's fine."** It compiles today and quietly breaks the whole point of this phase. If you find yourself wanting to pass a `loom_core.ToolDefinition` straight into `Provider.stream`, that's the signal you're about to do Phase 3's translation work inside Phase 2 — stop, and remember `ProviderToolSchema` exists precisely so you don't have to.
 - **Indexing tool-call deltas by name instead of the chunk's `index` field.** OpenAI-compatible streams can interleave arguments for more than one tool call in a single turn; the `index` in each chunk is the only stable key until `id` shows up (and `id` sometimes only arrives on the first chunk for that call). `_handle_line`'s `open_tool_calls: dict[int, str]` exists for exactly this reason — don't simplify it away.
@@ -826,13 +786,13 @@ The remaining things the cross-check pass surfaced are real but belong to phases
 - **Forgetting `close()` because the test ran once and didn't leak.** A single-stream test won't notice the leaked `httpx.Client`; a Phase 3 loop that creates and discards hundreds will. Either use `with provider: ...` or call `provider.close()` explicitly at the end of the consumer's lifetime.
 - **Letting a non-primitive field onto a `StreamEvent` variant "just this once."** It's tempting when you're passing a parsed JSON object or an exception around. The habit of holding the line on JSON-primitive fields (§3) is what makes Phase 7 a 15-minute dispatch table; one slip and you've re-opened that work.
 
-## 14. Known debt carried into later phases
+## 13. Known debt carried into later phases
 
 Written down on purpose, same discipline as Phase 1 §14:
 
 - **No retry/backoff.** `StreamError.retryable` is reported, never acted on. Phase 4's harness (or Phase 3's loop, if it turns out to belong there) is where a retry policy gets implemented — against a `StreamError` stream that already exists, rather than needing this phase reopened.
 - **No cancellation.** `Provider.stream()` runs to completion or raises; there's no way to stop it mid-stream. This is intentionally deferred to the async upgrade Phase 1 already flagged for Phase 3 — cooperative cancellation needs `asyncio`, and bolting a half-cancellation story onto a sync generator now would just be thrown away.
-- **Only one real provider.** `OpenAICompatibleProvider` covers OpenAI itself plus every endpoint that mirrors its wire format. An `AnthropicProvider` (different streaming event shape, different tool-schema envelope) is a natural Phase 2.5 / later addition against the same `Provider` protocol — nothing about this phase's design should need to change to add it.
+- **Only one real OpenAI-shaped provider.** Anthropic adapter added in Phase 2.5.
 - **No provider-side rate-limit awareness beyond a boolean.** Real vendor responses often carry `Retry-After` headers or structured rate-limit payloads; `StreamError.retryable` is a coarse yes/no. Fine for now, revisit if Phase 4's retry logic wants more signal.
 
 Carried forward from the cross-check research pass — *no code change in this phase, just a written note so it doesn't get re-discovered later*:
@@ -842,8 +802,6 @@ Carried forward from the cross-check research pass — *no code change in this p
 
 ---
 
-Phase 2 gives you a real, working provider boundary: a fake one Phase 3 can test against with zero flakiness, and a real one that can talk to an actual model whenever you want to point it at one, with a connection-lifecycle contract and a JSON-serializability rule that will keep the door open to a JSON-RPC frontend later without re-opening this code.
+Phase 2 gives you a provider boundary: `FakeProvider` for tests and `OpenAICompatibleProvider` for real endpoints.
 
-➡️ **Phase 3 — the pure agent loop.** This is where `loom_core` finally gets a function that takes a `Provider`, a `tuple[Message, ...]`, and a `tuple[ToolDefinition, ...]`, and produces an `AgentEvent` stream: translating `Message` → `ProviderMessage` on the way down, driving `Provider.stream()`, and assembling the `StreamEvent`s that come back into ordered content blocks on the way up. No persistence, no CLI, no I/O beyond the provider you hand it — testable entirely against `FakeProvider` from this phase.
-
-Get the Phase 2 checklist fully green, then say the word. 🚀
+Next: **Phase 2.5** (provider catalog + Anthropic adapter), then **Phase 3** (agent loop).
