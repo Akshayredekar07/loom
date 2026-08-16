@@ -1,0 +1,124 @@
+[[provider]]
+id = "openai"
+protocol = "openai-compatible"
+base_url = "https://api.openai.com/v1"
+env_key = "OPENAI_API_KEY"
+models = ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]
+
+[[provider]]
+id = "anthropic"
+protocol = "anthropic-messages"
+base_url = "https://api.anthropic.com/v1"
+env_key = "ANTHROPIC_API_KEY"
+models = ["claude-sonnet-5", "claude-sonnet-4-6", "claude-opus-4-8", "claude-opus-4-6", "claude-haiku-4-5"]
+
+[[provider]]
+id = "deepseek"
+protocol = "openai-compatible"
+base_url = "https://api.deepseek.com/v1"
+env_key = "DEEPSEEK_API_KEY"
+models = ["deepseek-v4-flash", "deepseek-v4-pro"]
+
+[[provider]]
+id = "qwen"
+protocol = "openai-compatible"
+base_url = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+env_key = "DASHSCOPE_API_KEY"
+models = ["qwen3.8-max", "qwen3.7-plus", "qwen3-coder-plus", "qwen3-coder-flash", "qwen3.5-flash"]
+
+[[provider]]
+id = "kimi"
+protocol = "openai-compatible"
+base_url = "https://api.moonshot.ai/v1"
+env_key = "MOONSHOT_API_KEY"
+models = ["kimi-k3", "kimi-k2.6", "kimi-k2.7-code-highspeed"]
+
+[[provider]]
+id = "minimax"
+protocol = "openai-compatible"
+base_url = "https://api.minimax.io/v1"
+env_key = "MINIMAX_API_KEY"
+models = ["MiniMax-M3", "MiniMax-M2.5", "MiniMax-M2.5-highspeed"]
+
+[[provider]]
+id = "zai"
+protocol = "openai-compatible"
+base_url = "https://api.z.ai/api/paas/v4"
+env_key = "ZAI_API_KEY"
+models = ["glm-4.7", "glm-4.7-flash"]
+
+[[provider]]
+id = "openrouter"
+protocol = "openai-compatible"
+base_url = "https://openrouter.ai/api/v1"
+env_key = "OPENROUTER_API_KEY"
+models = [
+    "anthropic/claude-sonnet-5",
+    "anthropic/claude-haiku-4.5",
+    "google/gemini-3.7-flash",
+    "deepseek/deepseek-v4-flash",
+]
+
+[[provider]]
+id = "groq"
+protocol = "openai-compatible"
+base_url = "https://api.groq.com/openai/v1"
+env_key = "GROQ_API_KEY"
+models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"]
+
+[[provider]]
+id = "together"
+protocol = "openai-compatible"
+base_url = "https://api.together.xyz/v1"
+env_key = "TOGETHER_API_KEY"
+models = [
+    "Qwen/Qwen3.7-Plus",
+    "Qwen/Qwen3.5-9B",
+    "Qwen/Qwen3-Next-80B-A3B-Instruct",
+]
+
+[[provider]]
+id = "fireworks"
+protocol = "openai-compatible"
+base_url = "https://api.fireworks.ai/inference/v1"
+env_key = "FIREWORKS_API_KEY"
+models = [
+    "accounts/fireworks/models/gpt-oss-120b",
+    "accounts/fireworks/models/deepseek-r1-0528-distill-qwen3-8b",
+]
+
+[[provider]]
+id = "xai"
+protocol = "openai-compatible"
+base_url = "https://api.x.ai/v1"
+env_key = "XAI_API_KEY"
+models = ["grok-4.6", "grok-4.5", "grok-4.3"]
+
+[[provider]]
+id = "nvidia"
+protocol = "openai-compatible"
+base_url = "https://integrate.api.nvidia.com/v1"
+env_key = "NVIDIA_API_KEY"
+models = [
+    "deepseek-ai/deepseek-v4-flash",
+    "openai/gpt-oss-120b",
+    "Qwen/Qwen3.6-35B-A3B",
+]
+
+[[provider]]
+id = "huggingface"
+protocol = "openai-compatible"
+base_url = "https://router.huggingface.co/v1"
+env_key = "HF_TOKEN"
+models = [
+    "deepseek-ai/DeepSeek-V4-Flash",
+    "openai/gpt-oss-120b",
+    "Qwen/Qwen3.6-35B-A3B",
+]
+
+[[provider]]
+id = "local"
+protocol = "openai-compatible"
+base_url = "http://localhost:8000/v1"
+env_key = ""
+models = ["whatever-you-loaded"]
