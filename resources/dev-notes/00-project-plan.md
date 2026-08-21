@@ -292,24 +292,31 @@ Full install commands and config files are in `01-PHASE-0-foundation.md`.
 
 ## **8. Sources**
 
-- Tau repository — <https://github.com/huggingface/tau>
-- Tau roadmap (the phase list this plan adapts) — <https://github.com/huggingface/tau/issues/1>
-- Tau docs site — <https://twotimespi.dev/>
-  - Architecture overview — <https://twotimespi.dev/internals/architecture/>
-  - The agent loop & events — <https://twotimespi.dev/internals/agent-loop/>
-  - Design principles — <https://twotimespi.dev/internals/design-principles/>
-  - Extensions/event payloads — <https://twotimespi.dev/guides/extensions/>
-- Claude Code architecture analyses (community, unofficial):
-  - <https://zainhas.github.io/blog/2026/inside-claude-code-architecture/>
-  - <https://claude-code-from-source.com/>
-  - <https://dev.to/brooks_wilson_36fbefbbae4/claude-code-architecture-explained-agent-loop-tool-system-and-permission-model-rust-rewrite-41b2>
-- Anthropic's public Agent SDK loop docs — <https://code.claude.com/docs/en/agent-sdk/agent-loop>
-- `openai/codex` — <https://github.com/openai/codex>
-- `xai-org/grok-build` — <https://github.com/xai-org/grok-build>
-- `nousresearch/hermes-agent` — <https://github.com/nousresearch/hermes-agent>
-- `codeaashu/claude-code` — <https://github.com/codeaashu/claude-code>
-- `opencode` — <https://github.com/sst/opencode>
-- `huggingface/smolagents` (for a contrasting, code-executing agent style) — <https://github.com/huggingface/smolagents>
+* Tau repository — [https://github.com/huggingface/tau](https://github.com/huggingface/tau)
+* Tau roadmap (the phase list this plan adapts) — [https://github.com/huggingface/tau/issues/1](https://github.com/huggingface/tau/issues/1)
+* Tau docs site — [https://twotimespi.dev/](https://twotimespi.dev/)
+
+  * Architecture overview — [https://twotimespi.dev/internals/architecture/](https://twotimespi.dev/internals/architecture/)
+  * The agent loop & events — [https://twotimespi.dev/internals/agent-loop/](https://twotimespi.dev/internals/agent-loop/)
+  * Design principles — [https://twotimespi.dev/internals/design-principles/](https://twotimespi.dev/internals/design-principles/)
+  * Extensions/event payloads — [https://twotimespi.dev/guides/extensions/](https://twotimespi.dev/guides/extensions/)
+* Decoding AI — *The Coding Agent Loop* — [https://www.decodingai.com/p/the-coding-agent-loop](https://www.decodingai.com/p/the-coding-agent-loop)
+* Claude Code architecture analyses (community, unofficial):
+
+  * [https://zainhas.github.io/blog/2026/inside-claude-code-architecture/](https://zainhas.github.io/blog/2026/inside-claude-code-architecture/)
+  * [https://claude-code-from-source.com/](https://claude-code-from-source.com/)
+  * [https://dev.to/brooks_wilson_36fbefbbae4/claude-code-architecture-explained-agent-loop-tool-system-and-permission-model-rust-rewrite-41b2](https://dev.to/brooks_wilson_36fbefbbae4/claude-code-architecture-explained-agent-loop-tool-system-and-permission-model-rust-rewrite-41b2)
+* Anthropic's public Agent SDK loop docs — [https://code.claude.com/docs/en/agent-sdk/agent-loop](https://code.claude.com/docs/en/agent-sdk/agent-loop)
+* `openai/codex` — [https://github.com/openai/codex](https://github.com/openai/codex)
+* `xai-org/grok-build` — [https://github.com/xai-org/grok-build](https://github.com/xai-org/grok-build)
+* `nousresearch/hermes-agent` — [https://github.com/nousresearch/hermes-agent](https://github.com/nousresearch/hermes-agent)
+* `codeaashu/claude-code` — [https://github.com/codeaashu/claude-code](https://github.com/codeaashu/claude-code)
+* `opencode` — [https://github.com/sst/opencode](https://github.com/sst/opencode)
+* `PrimeIntellect-ai/prime-agent` — [https://github.com/PrimeIntellect-ai/prime-agent](https://github.com/PrimeIntellect-ai/prime-agent)
+* `deepseek-ai/deepseek-harness` — [https://github.com/deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+* `yc-software/qm` — [https://github.com/yc-software/qm](https://github.com/yc-software/qm)
+
+
 
 Not independently re-analyzed for this plan (secondary references, revisit
 after your own loop works): `openai/codex`, `xai-org/grok-build`,
