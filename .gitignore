@@ -9,3 +9,6 @@ scaffold-loom.sh
 .env
 .env.*
 !.env.example
+brain
+brain/
+brain/*
